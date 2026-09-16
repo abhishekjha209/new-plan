@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  # 1. The FastAPI Backend
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000" # Maps Mac Port 8000 to Container Port 8000
+    env_file:
+      - .env
+    volumes:
+      - ./backend:/app # This syncs your Mac files to the container so you don't have to rebuild on every edit!
+    depends_on:
+      - db
+      - redis
+
+  # 2. The Next.js Frontend
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules # Prevents your Mac from overwriting the container's node modules
+    depends_on:
+      - backend
+
+  # 3. The PostgreSQL Database
+  db:
+    image: postgres:15-alpine
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: mydb
+    volumes:
+      - postgres_data:/var/lib/postgresql/data # Makes sure your data survives a restart!
+
+  # 4. The Redis Cache
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+# Define the persistent storage volume for the database
+volumes:
+  postgres_data:
