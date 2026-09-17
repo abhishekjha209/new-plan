@@ -1,9 +1,9 @@
 # Progress Log
 
-**Current Status:** Completed Day 4
-**Next Up:** Start Day 5 (FastAPI Endpoints)
+**Current Status:** Completed Day 5
+**Next Up:** Start Day 6 (PostgreSQL + SQLAlchemy)
 
-## 🏆 What Has Been Accomplished (Days 1 - 4)
+## 🏆 What Has Been Accomplished (Days 1 - 5)
 
 ### 1. Architecture & Design (Day 1)
 - Defined the product: **AI Knowledge Platform**
@@ -31,14 +31,14 @@
 - Added CORS middleware to FastAPI to allow browser requests.
 - Successfully verified frontend-to-backend communication (fetch on `/` calling `/health`).
 
-## 🚀 Next Steps for New Session (Day 5)
-In the next session, begin with **Day 5: FastAPI**. 
-The goal is to build out the foundation of the backend APIs using Python.
+### 5. FastAPI Endpoints (Day 5)
+- Completed `backend/schemas.py` defining full input and response validation schemas (Register, Login, Token, DocumentCreate, DocumentResponse, ChatRequest, ChatResponse).
+- Created mock in-memory database in `backend/main.py`.
+- Developed `HTTPBearer` security dependency to handle token extraction and user session mapping.
+- Implemented core REST endpoints: `/auth/register`, `/auth/login`, `/users/me`, `/documents` (POST and GET), and `/chat` (POST with conversation thread support).
+- Built a portable, automated cross-platform API integration test suite in `scripts/test_api.sh` and confirmed all endpoints pass validation.
 
-**Target Endpoints to Build:**
-- `POST /auth/register`
-- `POST /auth/login`
-- `GET /users/me`
-- `GET /documents`
-- `POST /documents`
-- `POST /chat`
+## 🚀 Next Steps for New Session (Day 6)
+In the next session, begin with **Day 6: PostgreSQL + SQLAlchemy**. 
+The goal is to transition our in-memory data structures into a real PostgreSQL database with SQLAlchemy models and sessions.
+
