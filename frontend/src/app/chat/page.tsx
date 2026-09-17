@@ -2,15 +2,15 @@
 
 const ChatPage = () => {
     return (
-        <div>
+        <div className="w-full">
             <h1 className="text-2xl font-bold w-full">Chat</h1>
             <div className="w-full flex flex-col items-center mt-4">
                 <div className="border border-gray-200 rounded-lg p-4 mt-4">
                     <p>Chat with your documents</p>
                     <p>Chat with your documents</p>
                 </div>
-                <form className="w-full flex">
-                    <input type="text" placeholder="Message" className="w-full border border-gray-200 rounded-lg p-2" />
+                <form className="w-full flex mt-4">
+                        <input type="text" placeholder="Message" className="w-full border border-gray-200 rounded-lg p-2" />
                     <button type="submit">Send</button>
                 </form>
             </div>

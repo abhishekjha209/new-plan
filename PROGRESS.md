@@ -1,9 +1,9 @@
 # Progress Log
 
-**Current Status:** Completed Day 5
-**Next Up:** Start Day 6 (PostgreSQL + SQLAlchemy)
+**Current Status:** Completed Day 6
+**Next Up:** Start Day 7 (First Deployment)
 
-## 🏆 What Has Been Accomplished (Days 1 - 5)
+## 🏆 What Has Been Accomplished (Days 1 - 6)
 
 ### 1. Architecture & Design (Day 1)
 - Defined the product: **AI Knowledge Platform**
@@ -38,7 +38,17 @@
 - Implemented core REST endpoints: `/auth/register`, `/auth/login`, `/users/me`, `/documents` (POST and GET), and `/chat` (POST with conversation thread support).
 - Built a portable, automated cross-platform API integration test suite in `scripts/test_api.sh` and confirmed all endpoints pass validation.
 
-## 🚀 Next Steps for New Session (Day 6)
-In the next session, begin with **Day 6: PostgreSQL + SQLAlchemy**. 
-The goal is to transition our in-memory data structures into a real PostgreSQL database with SQLAlchemy models and sessions.
+### 6. PostgreSQL + SQLAlchemy (Day 6)
+- Configured modern, object-oriented, type-safe relational database models in `backend/models.py` using SQLAlchemy 2.0 (`Mapped` and `mapped_column` type annotations).
+- Configured robust database-level foreign keys, unique indexes, and cascade deletions (`ondelete="CASCADE"`).
+- Set up engine, connection pooling, and request-scoped session factories (`SessionLocal` with auto-closing generators) in `backend/database.py`.
+- Automated table creation on backend startup using SQLAlchemy metadata creation routines.
+- Re-routed all API endpoints in `backend/main.py` to query, create, commit, and refresh data directly in PostgreSQL.
+- Resolved docker-internal container-to-container network resolving using `docker-compose.yml` environment overrides.
+- Experimentally verified persistent storage by restarting database and server services, successfully retrieving data from disk storage volumes.
+
+## 🚀 Next Steps for New Session (Day 7)
+In the next session, begin with **Day 7: First Deployment**. 
+The goal is to deploy our React frontend, FastAPI backend, and PostgreSQL database live to a real cloud URL!
+
 
