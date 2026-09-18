@@ -65,7 +65,7 @@ gcloud run deploy "$SERVICE_NAME" \
     --region "$REGION" \
     --allow-unauthenticated \
     --quiet \
-    --set-env-vars "DATABASE_URL=postgresql://mydb_owner:npg_6QE2LpwGtcST@ep-falling-fire-b57jetpa-pooler.c-7.us-east-2.aws.neon.tech/mydb?sslmode=require&channel_binding=require"
+    --set-env-vars "DATABASE_URL=postgresql://mydb_owner:npg_6QE2LpwGtcST@ep-falling-fire-b57jetpa-pooler.c-7.us-east-2.aws.neon.tech/mydb?sslmode=require&channel_binding=require,ALLOWED_ORIGINS=*"
 
 echo -e "\n${GREEN}✔ [4/4] Enterprise Cloud Run Service Successfully Deployed!${NC}"
 echo -e "Next Steps:"
@@ -74,4 +74,6 @@ echo -e "  2. Select Cloud Run -> ${SERVICE_NAME}."
 echo -e "  3. Go to Variables & Secrets."
 echo -e "  4. Set 'DATABASE_URL' to your production PostgreSQL connection string."
 echo -e "  5. Set 'ALLOWED_ORIGINS' to your live Next.js Vercel URL."
+echo -e "     (Note: If setting multiple domains, use semicolon delimiters instead of commas"
+echo -e "      to prevent gcloud parsing issues, e.g., 'https://my-frontend.vercel.app;http://localhost:3000')"
 echo -e "  6. Enjoy your live public API! 🎉"

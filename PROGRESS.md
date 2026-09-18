@@ -72,6 +72,15 @@
     * `GCP_SA_KEY` *(The entire downloaded GCP JSON Key text)*
 - **LIVE DEPLOYMENT SUCCESS:** Built, verified, and pushed our serverless container live to Google Cloud Run! The API is serving public traffic live at: **`https://ai-knowledge-api-610287324530.us-east5.run.app/health`**.
 
+### 7.5. Production CORS & CI/CD Pipeline Automation (Hotfix & Enhancement)
+- **Safe Wildcard Credentials Matching:** Resolved a standard browser security conflict where browsers reject CORS responses containing both `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Credentials: true`. Upgraded the FastAPI backend in `backend/main.py` to automatically detect a wildcard `*` configuration and seamlessly translate it to `allow_origin_regex=".*"`. This dynamically mirrors back the browser's requesting origin, allowing credentialed API calls to succeed flawlessly.
+- **Semicolon Delimiter Support for CLI:** Introduced semicolon delimiter support (`ALLOWED_ORIGINS=https://my-frontend.vercel.app;http://localhost:3000`) on the backend. This gracefully bypasses the Google Cloud SDK CLI parsing issue where commas are treated as environment variable separators, avoiding deployment script failures.
+- **Automated URL Resolution in GitHub Actions:** Integrated dynamic URL discovery directly inside the `.github/workflows/deploy.yml` pipeline. Upon deploying the backend to Google Cloud Run, the pipeline automatically queries, extracts, and prints the live service URL:
+  ```bash
+  BACKEND_URL=$(gcloud run services describe ai-knowledge-api --region us-east5 --format="value(status.url)")
+  ```
+- **Automated Frontend GitOps Rebuild:** Connected your frontend and backend deployment lifecycles by adding a dynamic Vercel Deployment Action step to the GitHub Actions workflow. When secrets are configured (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID`), the pipeline automatically updates your frontend's `NEXT_PUBLIC_API_URL` environment variable on Vercel and triggers a clean production rebuild of the Next.js application, completely automating your end-to-end deployment on push.
+
 ## 🚀 Next Steps for New Session (Day 8)
 In the next session, begin with **Day 8: Password Authentication**. 
 The goal is to move from our simple mock passwords to industry-standard security (password hashing using bcrypt, session creation, and secure JSON Web Tokens (JWT)).

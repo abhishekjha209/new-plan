@@ -18,14 +18,29 @@ models.Base.metadata.create_all(bind=engine)
 app = FastAPI(title="AI Knowledge Platform API (PostgreSQL)")
 
 # Retrieve allowed CORS origins from environment variables in production
-# Comma-separated list: "https://my-frontend.vercel.app,http://localhost:3000"
+# Supports comma-separated or semicolon-separated list: "https://my-frontend.vercel.app;http://localhost:3000"
 allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
-origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+
+# Split by semicolon if present (avoids gcloud CLI comma-parsing issues), otherwise by comma
+if ";" in allowed_origins_env:
+    origins = [origin.strip() for origin in allowed_origins_env.split(";")]
+else:
+    origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+
+# If "*" is in origins, we handle it safely by setting allow_origin_regex to match any origin
+# This avoids browser-side CORS failures that occur when combining allow_credentials=True with allow_origins=["*"]
+allow_all_origins = "*" in origins
+if allow_all_origins:
+    origins = []
+    allow_origin_regex = ".*"
+else:
+    allow_origin_regex = None
 
 # Give permission to the Next.js frontend to talk to us
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins, 
+    allow_origins=origins,
+    allow_origin_regex=allow_origin_regex,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

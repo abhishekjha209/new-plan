@@ -37,10 +37,37 @@ jobs:
       # Step 5: Build, Tag, and Push the Backend container in the Cloud (via GCP Cloud Build)
       # This executes the same high-performance cloud compilation as our deploy_gcp.sh script
       - name: Build and Deploy to Cloud Run
+        id: deploy-backend
         run: |
           gcloud run deploy ai-knowledge-api \
             --source ./backend \
             --region us-east5 \
             --allow-unauthenticated \
             --quiet \
-            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}"
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }},ALLOWED_ORIGINS=*"
+
+      # Step 6: Capture and print the deployed backend live URL
+      - name: Get Deployed Backend URL
+        id: get-url
+        run: |
+          BACKEND_URL=$(gcloud run services describe ai-knowledge-api --region us-east5 --format="value(status.url)")
+          echo "=================================================="
+          echo "🚀 Backend is live at: $BACKEND_URL"
+          echo "=================================================="
+          echo "backend_url=$BACKEND_URL" >> $GITHUB_ENV
+
+      # Step 7: (Production Automation) Trigger Frontend Rebuild on Vercel
+      # This step automatically updates your frontend environment variables on Vercel
+      # and triggers a production redeployment of your Next.js application.
+      # It runs dynamically only if you have configured VERCEL_TOKEN, VERCEL_ORG_ID,
+      # and VERCEL_PROJECT_ID in your GitHub Repository Secrets!
+      - name: Deploy Frontend to Vercel
+        if: ${{ secrets.VERCEL_TOKEN != '' }}
+        uses: amondnet/vercel-action@v20
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          vercel-args: '--prod --env NEXT_PUBLIC_API_URL=${{ env.backend_url }}'
+
+
