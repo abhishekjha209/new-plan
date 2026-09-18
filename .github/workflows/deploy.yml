@@ -9,6 +9,8 @@ jobs:
   build-and-deploy:
     name: Build & Deploy to Google Cloud Run
     runs-on: ubuntu-latest
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
 
     steps:
       # Step 1: Checkout our codebase from GitHub to the runner VM
@@ -62,7 +64,7 @@ jobs:
       # It runs dynamically only if you have configured VERCEL_TOKEN, VERCEL_ORG_ID,
       # and VERCEL_PROJECT_ID in your GitHub Repository Secrets!
       - name: Deploy Frontend to Vercel
-        if: ${{ secrets.VERCEL_TOKEN != '' }}
+        if: env.VERCEL_TOKEN != ''
         uses: amondnet/vercel-action@v20
         with:
           vercel-token: ${{ secrets.VERCEL_TOKEN }}
