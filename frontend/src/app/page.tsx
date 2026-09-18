@@ -7,12 +7,15 @@ export default function Home() {
 
   const checkHealth = async () => {
     try {
-      // Hit the FastAPI backend running in its Docker container
-      const res = await fetch("http://localhost:8000/health");
+      // Read the API URL from environment variables, fallback to local docker container
+      const apiBaseUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+      
+      // Hit the FastAPI backend (either local or live cloud)
+      const res = await fetch(`${apiBaseUrl}/health`);
       const data = await res.json();
       setStatus(data.message);
     } catch (err) {
-      setStatus("Error connecting to backend: Is Docker running?");
+      setStatus("Error connecting to backend: Is the server running?");
     }
   };
 

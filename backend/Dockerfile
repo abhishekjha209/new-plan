@@ -13,8 +13,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy the rest of your application code
 COPY . .
 
-# Expose the port the app runs on
-EXPOSE 8000
+# Expose the port (informative only, Cloud Run ignores this and maps PORT dynamically)
+EXPOSE 8080
 
-# The command to run the application (using FastAPI's standard server)
-CMD ["fastapi", "run", "main.py", "--port", "8000"]
+# Run using a high-performance production ASGI runner (Uvicorn).
+# We use the shell format (no square brackets) to allow environment variable expansion of $PORT.
+# If $PORT is not defined, it defaults to 8080.
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8080}

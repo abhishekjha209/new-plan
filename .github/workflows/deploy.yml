@@ -1,0 +1,46 @@
+name: Enterprise Cloud Run Deploy
+
+# Trigger this pipeline only on pushes to the main branch
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-and-deploy:
+    name: Build & Deploy to Google Cloud Run
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout our codebase from GitHub to the runner VM
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      # Step 2: Authenticate with Google Cloud using a Service Account Key
+      # We read the secure JSON key stored in your GitHub Repository Secrets
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      # Step 3: Set up the gcloud CLI on the runner VM
+      - name: Set up Google Cloud SDK
+        uses: google-github-actions/setup-gcloud@v1
+        with:
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
+      # Step 4: Configure Docker to use gcloud credentials
+      # This allows GitHub to securely push built containers to Google Artifact Registry
+      - name: Configure Docker Authentication
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev --quiet
+
+      # Step 5: Build, Tag, and Push the Backend container in the Cloud (via GCP Cloud Build)
+      # This executes the same high-performance cloud compilation as our deploy_gcp.sh script
+      - name: Build and Deploy to Cloud Run
+        run: |
+          gcloud run deploy ai-knowledge-api \
+            --source ./backend \
+            --region us-east5 \
+            --allow-unauthenticated \
+            --quiet \
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }}"

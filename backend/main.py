@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -16,10 +17,15 @@ models.Base.metadata.create_all(bind=engine)
 
 app = FastAPI(title="AI Knowledge Platform API (PostgreSQL)")
 
+# Retrieve allowed CORS origins from environment variables in production
+# Comma-separated list: "https://my-frontend.vercel.app,http://localhost:3000"
+allowed_origins_env = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000")
+origins = [origin.strip() for origin in allowed_origins_env.split(",")]
+
 # Give permission to the Next.js frontend to talk to us
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"], 
+    allow_origins=origins, 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

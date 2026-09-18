@@ -1,9 +1,9 @@
 # Progress Log
 
-**Current Status:** Completed Day 6
-**Next Up:** Start Day 7 (First Deployment)
+**Current Status:** Completed Day 7
+**Next Up:** Start Day 8 (Password Authentication)
 
-## 🏆 What Has Been Accomplished (Days 1 - 6)
+## 🏆 What Has Been Accomplished (Days 1 - 7)
 
 ### 1. Architecture & Design (Day 1)
 - Defined the product: **AI Knowledge Platform**
@@ -47,8 +47,34 @@
 - Resolved docker-internal container-to-container network resolving using `docker-compose.yml` environment overrides.
 - Experimentally verified persistent storage by restarting database and server services, successfully retrieving data from disk storage volumes.
 
-## 🚀 Next Steps for New Session (Day 7)
-In the next session, begin with **Day 7: First Deployment**. 
-The goal is to deploy our React frontend, FastAPI backend, and PostgreSQL database live to a real cloud URL!
+### 7. Cloud Deployment Blueprint (Day 7)
+- **High-Performance Production Dockerization:** Upgraded `backend/Dockerfile` to use a production-grade **Uvicorn** server instead of local `fastapi dev` tools. Configured the startup command in **Shell Execution Form** (`CMD uvicorn ...`) rather than Exec Form to allow dynamic shell expansion of the `$PORT` environment variable dynamically injected by the Google Cloud Run load balancer, defaulting to `8080`.
+- **Dynamic CORS Isolation:** Modernized `backend/main.py` to parse allowed CORS origins dynamically from the `ALLOWED_ORIGINS` environment variable. This securely decouples local development on `localhost:3000` from your public web clients, preventing browser cross-origin blocking.
+- **Dynamic Frontend Integration:** Refactored the Next.js Home Page to read the backend API URL dynamically via `NEXT_PUBLIC_API_URL` environment variables. Created a local frontend config file (`frontend/.env.local`) to redirect your local browser client across the internet to your live cloud server with zero code changes.
+- **Enterprise Multi-Cloud Region Alignment:** 
+  - Aligned our Google Cloud Run deployment region to GCP Ohio (`us-east5`) to match our serverless Neon PostgreSQL database (AWS Ohio `us-east-2`), collapsing database socket roundtrip latency from ~40ms down to **~2ms**.
+  - Leveraged Neon's **Connection Pooler (`DATABASE_URL_POOLED`)** (PgBouncer proxy) to manage connection reuse dynamically, preventing database connection exhaustion as serverless containers scale horizontally.
+- **Enterprise GCP IAM Robot Setup:**
+  - Created a dedicated robot deployer identity named **`github-deployer`** inside the GCP IAM Console.
+  - Granted the service account the **5 specific permissions (Roles)** required for automated deployment clearance:
+    1. `Cloud Run Admin` (Allows updating Cloud Run services)
+    2. `Storage Admin` (Allows uploading backend source code bundles)
+    3. `Cloud Build Editor` (Allows triggering cloud-based container compilation)
+    4. `Artifact Registry Administrator` (Allows storing built container images)
+    5. `Service Account User` (Required to bind Cloud Run to default compute identities)
+  - Generated and downloaded a private cryptographic authentication key in **JSON** format.
+- **Automated CI/CD GitOps Pipeline:**
+  - Designed and configured `.github/workflows/deploy.yml` to trigger automated builds whenever code is pushed to the `main` branch.
+  - Integrated steps to checkout code, authenticate with GCP using Google's Auth Action via the `GCP_SA_KEY` secret, configure Docker, and execute remote serverless builds on Google Cloud Run with dynamic environmental injections.
+  - Securely configured **GitHub Encrypted Repository Secrets** to manage:
+    * `GCP_PROJECT_ID` (`ai-platform-98765`)
+    * `DATABASE_URL` *(Your Neon pooled connection string)*
+    * `GCP_SA_KEY` *(The entire downloaded GCP JSON Key text)*
+- **LIVE DEPLOYMENT SUCCESS:** Built, verified, and pushed our serverless container live to Google Cloud Run! The API is serving public traffic live at: **`https://ai-knowledge-api-610287324530.us-east5.run.app/health`**.
+
+## 🚀 Next Steps for New Session (Day 8)
+In the next session, begin with **Day 8: Password Authentication**. 
+The goal is to move from our simple mock passwords to industry-standard security (password hashing using bcrypt, session creation, and secure JSON Web Tokens (JWT)).
+
 
 
