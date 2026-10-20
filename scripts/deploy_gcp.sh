@@ -59,13 +59,21 @@ echo -e "in the cloud, register it in Artifact Registry, and deploy it to a live
 echo -e "This will take about 1-2 minutes...\n"
 
 # Note: We pass --allow-unauthenticated so the public internet can access our REST endpoints
-# In production, we'll configure database URL environment variables in the GCP Console under Cloud Run configuration!
+# SECURITY: never hardcode the DATABASE_URL in this file - the repo is public.
+# Export it in your shell before running this script instead:
+#   export DATABASE_URL='postgresql://user:password@host/db?sslmode=require'
+if [ -z "$DATABASE_URL" ]; then
+    echo -e "${RED}✘ DATABASE_URL is not set. Export your Neon connection string first:${NC}"
+    echo -e "  export DATABASE_URL='postgresql://user:password@host/db?sslmode=require'"
+    exit 1
+fi
+
 gcloud run deploy "$SERVICE_NAME" \
     --source ./backend \
     --region "$REGION" \
     --allow-unauthenticated \
     --quiet \
-    --set-env-vars "DATABASE_URL=postgresql://mydb_owner:npg_6QE2LpwGtcST@ep-falling-fire-b57jetpa-pooler.c-7.us-east-2.aws.neon.tech/mydb?sslmode=require&channel_binding=require,ALLOWED_ORIGINS=*"
+    --set-env-vars "DATABASE_URL=$DATABASE_URL,ALLOWED_ORIGINS=*"
 
 echo -e "\n${GREEN}✔ [4/4] Enterprise Cloud Run Service Successfully Deployed!${NC}"
 echo -e "Next Steps:"
