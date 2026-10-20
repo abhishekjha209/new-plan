@@ -46,7 +46,7 @@ jobs:
             --region us-east5 \
             --allow-unauthenticated \
             --quiet \
-            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }},ALLOWED_ORIGINS=*"
+            --set-env-vars "DATABASE_URL=${{ secrets.DATABASE_URL }},ALLOWED_ORIGINS=*,JWT_SECRET=${{ secrets.JWT_SECRET }}"
 
       # Step 6: Capture and print the deployed backend live URL
       - name: Get Deployed Backend URL

@@ -9,6 +9,8 @@ from typing import List
 # Import schemas, database, and models
 import schemas
 import models
+import auth
+import jwt  # exposes ExpiredSignatureError / InvalidTokenError for get_current_user
 from database import engine, SessionLocal
 
 # Create database tables if they do not exist
@@ -56,37 +58,56 @@ def get_db():
         db.close()
 
 # Security utility used to handle Bearer token authentication via the HTTP Authorization header.
-# Performs Header Checks, Automatic Rejection & Extraction of the token
-security = HTTPBearer()
+# Performs Header Checks, Automatic Rejection & Extraction of the token.
+# auto_error=False: we raise our own 401 (RFC 9110 wants 401 + WWW-Authenticate
+# for missing credentials; Starlette's default would be 403).
+security = HTTPBearer(auto_error=False)
 
 # --- Dependency Injection for Auth ---
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security), 
+    credentials: HTTPAuthorizationCredentials | None = Depends(security),
     db: Session = Depends(get_db)
 ) -> models.User:
 
-    # credentials.credentials is the syntax used to extract the raw token string (like a JWT or API key) from an incoming HTTP request header
+    # 401, not 403: the request is UNAUTHENTICATED (no credentials at all).
+    # 403 will mean "authenticated but not allowed" when we add roles on Day 9.
+    if credentials is None:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing Authorization header",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     token = credentials.credentials
-    
-    # Check if the token format matches our mock session token format
-    # format: "mock-session-token-{user_id}"
-    if not token.startswith("mock-session-token-"):
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid session token format",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-        
+
+    # Verify signature AND expiry. jwt.decode raises on either failure.
     try:
-        user_id = int(token.split("-")[-1])
-    except ValueError:
+        payload = auth.decode_access_token(token)
+    except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid session token structure",
+            detail="Token has expired",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
-    # Query PostgreSQL to see if this user actually exists in the database
+    except jwt.InvalidTokenError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # The 'sub' claim is our source of truth for WHO the token identifies.
+    try:
+        user_id = int(payload["sub"])
+    except (KeyError, ValueError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token is missing a valid subject",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    # Signature proves the token is genuine, but the user may have been
+    # deleted since it was issued - the database is still the final authority.
     user = db.query(models.User).filter(models.User.id == user_id).first()
     if not user:
         raise HTTPException(
@@ -94,7 +115,7 @@ def get_current_user(
             detail="Authenticated user no longer exists",
             headers={"WWW-Authenticate": "Bearer"},
         )
-        
+
     return user
 
 
@@ -121,7 +142,7 @@ def register(user_in: schemas.UserRegister, db: Session = Depends(get_db)):
     new_user = models.User(
         email=email_lower,
         name=user_in.name,
-        password=user_in.password # Day 8 will implement secure hashing
+        password=auth.hash_password(user_in.password)  # bcrypt hash - plaintext is never persisted
     )
     
     db.add(new_user)     # 1. Register the object in SQLAlchemy session tracking
@@ -134,7 +155,7 @@ def register(user_in: schemas.UserRegister, db: Session = Depends(get_db)):
 @app.post("/auth/login", response_model=schemas.TokenResponse)
 def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
     email_lower = credentials.email.lower()
-    
+
     # Look up user in database
     user = db.query(models.User).filter(models.User.email == email_lower).first()
     if not user:
@@ -142,17 +163,20 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
         )
-        
-    # Verify plain text password (day 8 will implement bcrypt/argon2 hashing check)
-    if user.password != credentials.password:
+
+    # bcrypt verify is deliberately slow (~100ms+). That cost is the defense
+    # against offline brute force if the DB is ever stolen. Also: same vague
+    # error message for unknown email vs wrong password - don't leak which
+    # accounts exist.
+    if not auth.verify_password(credentials.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Incorrect email or password"
         )
-    
-    # Generate mock session token tied to the user's ID
-    token = f"mock-session-token-{user.id}"
-    
+
+    # Issue a signed JWT. Server stores no session state; the token IS the session.
+    token = auth.create_access_token(user.id)
+
     return {"access_token": token, "token_type": "bearer"}
 
 

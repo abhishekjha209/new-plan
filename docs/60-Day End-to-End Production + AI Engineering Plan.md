@@ -230,7 +230,7 @@ Learn:
 
 ---
 
-## Day 10 — JWT Deep Dive
+## Day 10 — JWT Deep Dive + Frontend Auth Integration
 
 Understand:
 
@@ -241,7 +241,19 @@ Understand:
 - Token theft
 - Logout
 
-Improve your implementation.
+Improve your implementation (backend):
+
+- Refresh tokens + rotation
+- Logout / revocation
+
+Then wire the UI — the Day 4/5 stub pages finally go live:
+
+- Login form → POST /auth/login; store the token, attach it as an `Authorization: Bearer` header via a shared fetch helper
+- Register page → POST /auth/register
+- Session restore via GET /users/me on load; logout clears the token
+- Documents + Chat pages call their endpoints with the token
+
+Why here: the token contract (access vs refresh, expiry, logout) is only settled at the end of this day — wiring the UI earlier means rebuilding token handling afterwards. After Day 10 the plan turns to SQL/DB internals, so nothing else needs it sooner.
 
 ---
 

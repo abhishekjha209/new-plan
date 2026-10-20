@@ -1,9 +1,9 @@
 # Progress Log
 
-**Current Status:** Completed Day 7
-**Next Up:** Start Day 8 (Password Authentication)
+**Current Status:** Completed Day 8
+**Next Up:** Start Day 9 (Authorization / RBAC) — Task 1: add `role` column to User model
 
-## 🏆 What Has Been Accomplished (Days 1 - 7)
+## 🏆 What Has Been Accomplished (Days 1 - 8)
 
 ### 1. Architecture & Design (Day 1)
 - Defined the product: **AI Knowledge Platform**
@@ -51,7 +51,7 @@
 - **High-Performance Production Dockerization:** Upgraded `backend/Dockerfile` to use a production-grade **Uvicorn** server instead of local `fastapi dev` tools. Configured the startup command in **Shell Execution Form** (`CMD uvicorn ...`) rather than Exec Form to allow dynamic shell expansion of the `$PORT` environment variable dynamically injected by the Google Cloud Run load balancer, defaulting to `8080`.
 - **Dynamic CORS Isolation:** Modernized `backend/main.py` to parse allowed CORS origins dynamically from the `ALLOWED_ORIGINS` environment variable. This securely decouples local development on `localhost:3000` from your public web clients, preventing browser cross-origin blocking.
 - **Dynamic Frontend Integration:** Refactored the Next.js Home Page to read the backend API URL dynamically via `NEXT_PUBLIC_API_URL` environment variables. Created a local frontend config file (`frontend/.env.local`) to redirect your local browser client across the internet to your live cloud server with zero code changes.
-- **Enterprise Multi-Cloud Region Alignment:** 
+- **Enterprise Multi-Cloud Region Alignment:**
   - Aligned our Google Cloud Run deployment region to GCP Ohio (`us-east5`) to match our serverless Neon PostgreSQL database (AWS Ohio `us-east-2`), collapsing database socket roundtrip latency from ~40ms down to **~2ms**.
   - Leveraged Neon's **Connection Pooler (`DATABASE_URL_POOLED`)** (PgBouncer proxy) to manage connection reuse dynamically, preventing database connection exhaustion as serverless containers scale horizontally.
 - **Enterprise GCP IAM Robot Setup:**
@@ -81,9 +81,25 @@
   ```
 - **Automated Frontend GitOps Rebuild:** Connected your frontend and backend deployment lifecycles by adding a dynamic Vercel Deployment Action step to the GitHub Actions workflow. When secrets are configured (`VERCEL_TOKEN`, `VERCEL_ORG_ID`, and `VERCEL_PROJECT_ID`), the pipeline automatically updates your frontend's `NEXT_PUBLIC_API_URL` environment variable on Vercel and triggers a clean production rebuild of the Next.js application, completely automating your end-to-end deployment on push.
 
-## 🚀 Next Steps for New Session (Day 8)
-In the next session, begin with **Day 8: Password Authentication**. 
-The goal is to move from our simple mock passwords to industry-standard security (password hashing using bcrypt, session creation, and secure JSON Web Tokens (JWT)).
+### 8. Password Authentication (Day 8)
+- New `backend/auth.py` module: `hash_password` / `verify_password` (bcrypt) and `create_access_token` / `decode_access_token` (PyJWT, HS256). Missing `JWT_SECRET` falls back to an ephemeral per-process secret with a loud warning — dev still works, but tokens die on restart.
+- `POST /auth/register` bcrypt-hashes before persisting — plaintext never touches the DB. `POST /auth/login` verifies with bcrypt (constant-time, vague "Incorrect email or password" for both failure modes so we don't leak which accounts exist) and issues a signed JWT instead of the old `mock-session-token-{id}` string.
+- `get_current_user` verifies signature + expiry via PyJWT and resolves the user from the `sub` claim against PostgreSQL (DB remains the final authority - deleted users' tokens die).
+- `HTTPBearer(auto_error=False)`: missing `Authorization` header now returns RFC-correct **401** with `WWW-Authenticate: Bearer` instead of Starlette's default 403.
+- Config plumbing: `JWT_SECRET` + `JWT_EXPIRE_MINUTES` (default 60) documented in `.env.example` and injected into Cloud Run via `.github/workflows/deploy.yml` (`JWT_SECRET` GitHub secret).
+- Verified end-to-end: old mock tokens, no header, attacker-forged token, and wrong password all → 401; expired token (real secret, past `exp`) → `ExpiredSignatureError` → 401 "Token has expired"; decoded a live token's payload with plain base64 to prove JWTs are readable — only `sub`/`iat`/`exp` inside; DB inspection: password column holds `$2b$12$...`, zero plaintext; login latency ~0.4s vs instant string compare (bcrypt cost visible).
+- Engineering decisions: bcrypt over argon2 for Day 8 (simpler to reason about first; argon2 noted as the modern memory-hard upgrade path — in the Learning Sheet backlog); PyJWT over python-jose (jose has maintenance/CVE history; PyJWT is clean and current); wiped the 6 plaintext users instead of building throwaway migration machinery (real-world lazy migration pattern discussed and shelved); fixed a latent Day 7 regression — the production Dockerfile change (`uvicorn ${PORT:-8080}`) had silently broken `docker compose up` (compose mapped 8000:8000, server listened on 8080), so compose now overrides with `fastapi dev main.py --port 8000` for hot reload.
+- Concepts learned (why SHA is wrong for passwords, bcrypt cost/salt, JWT anatomy `header.payload.signature` signed-not-encoded, stateless revocation tradeoff, 401 vs 403) are logged in the Day 8 row of `docs/Learning-Sheet.md`.
 
+## 🚀 Next Steps for New Session (Day 9)
+Begin **Day 9: Authorization (RBAC)** — distinguish authentication (who are you, done Day 8) from authorization (what are you allowed to do). Introduce `USER` / `ADMIN` roles, restrict admin APIs, and learn permissions modeling.
 
+- [ ] Task 1 (in progress): add `role` column to User model (`USER` default) — mind the `create_all` wall
+- [ ] Task 2: `require_admin` dependency
+- [ ] Task 3: admin-only endpoint + verify 403 vs 200 with curl
 
+## ⏳ Still To Do (user actions before next deploy)
+- [x] Add `JWT_SECRET` (generate: `openssl rand -hex 32`) to local `.env`. *(done 2026-10-20 via `gh`)*
+- [x] Create the `JWT_SECRET` secret in GitHub repo settings (needed by deploy.yml). *(done 2026-10-20 via `gh secret set`)*
+- [ ] Optionally `DELETE FROM users;` on the live Neon DB (old plaintext users are already locked out - bcrypt verify fails - but removing them is tidier).
+- [ ] With `JWT_SECRET` set, re-run the expired-token curl live to see the 401 "Token has expired" path end-to-end.

@@ -11,7 +11,7 @@ class User(Base):
     
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
-    password: Mapped[str] = mapped_column(String(255), nullable=False) # Day 8 will secure this
+    password: Mapped[str] = mapped_column(String(255), nullable=False) # bcrypt hash ($2b$...), never plaintext (Day 8)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
 
     #  default=func.now() populates dates automatically using the server time when a row is inserted

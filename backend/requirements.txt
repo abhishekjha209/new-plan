@@ -2,3 +2,5 @@ fastapi[standard]==0.115.0
 pydantic==2.9.2
 sqlalchemy==2.0.35 # The ORM Tool
 psycopg2-binary==2.9.9 # The Driver for Postgres
+bcrypt==4.2.1 # Password hashing (adaptive, salted - slow by design)
+PyJWT==2.10.1 # Signing and verifying JSON Web Tokens
