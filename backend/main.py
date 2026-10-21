@@ -192,10 +192,77 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
             detail="Incorrect email or password"
         )
 
-    # Issue a signed JWT. Server stores no session state; the token IS the session.
-    token = auth.create_access_token(user.id)
+    # Day 10 two-token model: a SHORT-lived stateless access token (15 min) +
+    # a LONG-lived stateful refresh token (7 days, stored hashed). The access
+    # token is now so short that its unrevocability stops mattering.
+    access_token = auth.create_access_token(user.id)
+    raw_refresh, hashed_refresh = auth.generate_refresh_token()
+    db.add(models.RefreshToken(
+        user_id=user.id,
+        token_hash=hashed_refresh,
+        expires_at=auth.refresh_expiry(),
+    ))
+    db.commit()
 
-    return {"access_token": token, "token_type": "bearer"}
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "refresh_token": raw_refresh,
+        "expires_in": auth.JWT_EXPIRE_MINUTES * 60,
+    }
+
+
+@app.post("/auth/refresh", response_model=schemas.TokenResponse)
+def refresh_tokens(body: schemas.RefreshRequest, db: Session = Depends(get_db)):
+    hashed = auth.hash_refresh_token(body.refresh_token)
+    row = db.query(models.RefreshToken).filter(models.RefreshToken.token_hash == hashed).first()
+
+    now = datetime.utcnow()
+    if not row or row.revoked_at is not None or row.expires_at < now:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token",
+        )
+
+    user = db.query(models.User).filter(models.User.id == row.user_id).first()
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User no longer exists",
+        )
+
+    # ROTATION: the presented token is revoked and a fresh pair is issued.
+    # If this old token is ever presented again (theft/replay), it is already
+    # revoked -> 401. Rotation turns refresh-token reuse into a detectable event.
+    row.revoked_at = now
+    raw_refresh, hashed_refresh = auth.generate_refresh_token()
+    db.add(models.RefreshToken(
+        user_id=user.id,
+        token_hash=hashed_refresh,
+        expires_at=auth.refresh_expiry(),
+    ))
+    db.commit()
+
+    return {
+        "access_token": auth.create_access_token(user.id),
+        "token_type": "bearer",
+        "refresh_token": raw_refresh,
+        "expires_in": auth.JWT_EXPIRE_MINUTES * 60,
+    }
+
+
+@app.post("/auth/logout")
+def logout(body: schemas.LogoutRequest, db: Session = Depends(get_db)):
+    # Server-side logout means one thing: kill the refresh token.
+    # The current access token keeps working until its 15-min expiry - accepted,
+    # because 15 minutes is the whole reason the access token is short.
+    # Idempotent on purpose: clients retry logout, and "already gone" is success.
+    hashed = auth.hash_refresh_token(body.refresh_token)
+    row = db.query(models.RefreshToken).filter(models.RefreshToken.token_hash == hashed).first()
+    if row and row.revoked_at is None:
+        row.revoked_at = datetime.utcnow()
+        db.commit()
+    return {"message": "Logged out"}
 
 
 @app.get("/users/me", response_model=schemas.UserResponse)

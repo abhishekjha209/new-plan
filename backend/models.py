@@ -102,3 +102,23 @@ class Message(Base):
     
     # Relationships
     conversation: Mapped["Conversation"] = relationship(back_populates="messages")
+
+
+class RefreshToken(Base):
+    __tablename__ = "refresh_tokens"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # SHA-256 of the opaque token the client holds. A fast hash suffices here:
+    # the token is high-entropy random, unlike a human password (bcrypt's
+    # slowness defends low-entropy secrets; random 384-bit ones need no stretching).
+    token_hash: Mapped[str] = mapped_column(String(64), unique=True, index=True, nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime, nullable=False)
+    # NULL = active. Setting this timestamp IS logout/revocation - the stateful half
+    # of the Day 10 two-token model. This column is what makes "logout" mean something.
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)

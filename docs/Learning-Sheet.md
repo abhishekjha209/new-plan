@@ -31,7 +31,7 @@
 
 | Day | Commands | Topics | Algorithms | Libs / Tools | Concepts |
 |-----|----------|--------|------------|--------------|----------|
-| 10 — JWT Deep Dive + Frontend Auth Integration | *(in progress)* | refresh tokens & rotation; access vs refresh; logout/revocation; token theft; wiring the Day 4/5 UI stubs to real auth | — | — | stateless ⇒ no revocation (Day 8) is the problem refresh tokens solve |
+| 10 — JWT Deep Dive + Frontend Auth Integration | `POST /auth/refresh`; `POST /auth/logout`; `docker compose up -d --force-recreate backend` (env_file is read only at container CREATION - env changes need recreate, not restart!) | access vs refresh tokens; rotation; server-side logout; token theft window | — | `secrets.token_urlsafe(48)`; SHA-256 for high-entropy tokens (bcrypt is only for low-entropy human passwords) | access = stateless JWT, **15 min**; refresh = **opaque + stateful DB row**, 7 days, stored **SHA-256 hashed**; **logout = revoke the refresh row** (access lives out its ≤15 min - accepted); rotation ⇒ replayed old refresh → 401 (reuse = theft signal); `.env` overrides code defaults — 60 was hiding our 15 |
 
 ---
 

@@ -29,10 +29,18 @@ class UserResponse(BaseSchema):
     role: str # Day 9: clients can see their own role (it is not a secret)
     created_at: datetime
 
-# Output for login token
+# Output for login AND refresh (Day 10: two-token model)
 class TokenResponse(BaseSchema):
-    access_token: str
+    access_token: str   # short-lived JWT (15 min) - attached to every API call
     token_type: str = "bearer"
+    refresh_token: str  # long-lived opaque token (7 days) - sent ONLY to /auth/refresh
+    expires_in: int     # access-token lifetime in seconds, a hint for clients
+
+class RefreshRequest(BaseSchema):
+    refresh_token: str
+
+class LogoutRequest(BaseSchema):
+    refresh_token: str
 
 
 # --- Document Schemas ---
