@@ -1,7 +1,7 @@
 # Progress Log
 
-**Current Status:** Completed Day 9
-**Next Up:** Start Day 10 (JWT Deep Dive + Frontend Auth Integration) — Task 1: backend refresh tokens + logout
+**Current Status:** Day 10 in progress — backend half complete (refresh tokens + logout, verified)
+**Next Up:** Day 10 frontend half — wire login/register UI, token storage, auto-refresh fetch helper, logout button
 
 ## 🏆 What Has Been Accomplished (Days 1 - 9)
 
@@ -104,7 +104,7 @@
 ## 🚀 Next Steps for New Session (Day 10)
 Day 10 — JWT Deep Dive + Frontend Auth Integration: settle the token design (access vs refresh, logout), then wire the Day 4/5 stub pages to real auth.
 
-- [ ] Task 1: backend — refresh token issuance + rotation, logout/revocation
+- [x] Task 1: backend — refresh token issuance + rotation, logout/revocation *(done 2026-10-21; verified end-to-end: expired access → 401, rotated-token replay → 401, logout → refresh dead, access outlives logout ≤15 min by design; access TTL 15 min, refresh 7 days stored SHA-256 hashed)*
 - [ ] Task 2: frontend — login/register forms call real endpoints; JWT stored; shared fetch helper attaches `Authorization: Bearer`
 - [ ] Task 3: session restore via `GET /users/me` on load; logout clears token; verify full flow in the browser
 
