@@ -119,6 +119,24 @@ def get_current_user(
     return user
 
 
+# --- Authorization (Day 9): RBAC ---
+# get_current_user answers WHO are you (401 if unknown).
+# require_admin answers WHAT may you do (403 if known but not ADMIN).
+# It DEPENDS ON get_current_user: FastAPI resolves the dependency chain
+# per request, so require_admin only ever sees already-authenticated users.
+# Design note: the role is read from the DB on every request, NOT from the JWT.
+# A JWT claim would be stale until expiry (60 min) after a demotion; the DB is the authority.
+def require_admin(
+    current_user: models.User = Depends(get_current_user),
+) -> models.User:
+    if current_user.role != "ADMIN":
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+    return current_user
+
+
 # --- Health Route ---
 @app.get("/health")
 def health_check():
@@ -183,6 +201,18 @@ def login(credentials: schemas.UserLogin, db: Session = Depends(get_db)):
 @app.get("/users/me", response_model=schemas.UserResponse)
 def get_me(current_user: models.User = Depends(get_current_user)):
     return current_user
+
+
+# --- Admin Endpoints (Day 9) ---
+
+@app.get("/admin/users", response_model=List[schemas.UserResponse])
+def list_all_users(
+    current_user: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    # A normal user's queries filter by user_id (see list_documents).
+    # An admin query has NO filter - that absence is the privilege.
+    return db.query(models.User).all()
 
 
 # --- Document Endpoints ---

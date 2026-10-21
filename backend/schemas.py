@@ -26,6 +26,7 @@ class UserResponse(BaseSchema):
     id: int
     email: EmailStr
     name: str
+    role: str # Day 9: clients can see their own role (it is not a secret)
     created_at: datetime
 
 # Output for login token

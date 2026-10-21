@@ -13,6 +13,9 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True, nullable=False)
     password: Mapped[str] = mapped_column(String(255), nullable=False) # bcrypt hash ($2b$...), never plaintext (Day 8)
     name: Mapped[str] = mapped_column(String(100), nullable=False)
+    # Day 9 (RBAC): every user carries a role; permissions attach to roles, not users.
+    # default="USER" is applied app-side on INSERT - least privilege for new accounts.
+    role: Mapped[str] = mapped_column(String(10), nullable=False, default="USER")
 
     #  default=func.now() populates dates automatically using the server time when a row is inserted
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now(), nullable=False)

@@ -1,9 +1,9 @@
 # Progress Log
 
-**Current Status:** Completed Day 8
-**Next Up:** Start Day 9 (Authorization / RBAC) — Task 1: add `role` column to User model
+**Current Status:** Completed Day 9
+**Next Up:** Start Day 10 (JWT Deep Dive + Frontend Auth Integration) — Task 1: backend refresh tokens + logout
 
-## 🏆 What Has Been Accomplished (Days 1 - 8)
+## 🏆 What Has Been Accomplished (Days 1 - 9)
 
 ### 1. Architecture & Design (Day 1)
 - Defined the product: **AI Knowledge Platform**
@@ -91,15 +91,24 @@
 - Engineering decisions: bcrypt over argon2 for Day 8 (simpler to reason about first; argon2 noted as the modern memory-hard upgrade path — in the Learning Sheet backlog); PyJWT over python-jose (jose has maintenance/CVE history; PyJWT is clean and current); wiped the 6 plaintext users instead of building throwaway migration machinery (real-world lazy migration pattern discussed and shelved); fixed a latent Day 7 regression — the production Dockerfile change (`uvicorn ${PORT:-8080}`) had silently broken `docker compose up` (compose mapped 8000:8000, server listened on 8080), so compose now overrides with `fastapi dev main.py --port 8000` for hot reload.
 - Concepts learned (why SHA is wrong for passwords, bcrypt cost/salt, JWT anatomy `header.payload.signature` signed-not-encoded, stateless revocation tradeoff, 401 vs 403) are logged in the Day 8 row of `docs/Learning-Sheet.md`.
 
-## 🚀 Next Steps for New Session (Day 9)
-Begin **Day 9: Authorization (RBAC)** — distinguish authentication (who are you, done Day 8) from authorization (what are you allowed to do). Introduce `USER` / `ADMIN` roles, restrict admin APIs, and learn permissions modeling.
+### 9. Authorization / RBAC (Day 9)
+- **Role column:** `role VARCHAR(10) NOT NULL DEFAULT 'USER'` added to `users` (app-side `default="USER"` on the model). Register never accepts a role from the client — self-serve admin would be privilege escalation.
+- **`create_all` wall hit in practice:** the model change 500'd every user query (`psycopg2.errors.UndefinedColumn: column users.role does not exist`) until the table was migrated by hand with `ALTER TABLE ... ADD COLUMN ... DEFAULT 'USER'` (existing rows backfilled by the DEFAULT). Manual psql/DBeaver migrations until Alembic (Day 16).
+- **`require_admin` dependency:** chains on `get_current_user` (Depends-on-Depends); FastAPI resolves the chain per request, so 401 cases never reach the role check. One-line reuse on any endpoint = single source of truth for the admin rule.
+- **Role read from DB per request, NOT from a JWT claim** — a claim would stay stale until token expiry after a demotion; the DB remains final authority (same rule as deleted users on Day 8).
+- **`GET /admin/users`** admin-only endpoint — the privilege is the *absence* of the `user_id` filter that every normal query carries.
+- **Bootstrap problem:** all accounts default to USER, so the first admin must be appointed out-of-band (`UPDATE users SET role='ADMIN' WHERE email=...`); no self-serve path by design.
+- **Verified matrix:** no token → 401; USER token → 403 "Admin access required"; ADMIN token → 200 with full user list; `/users/me` now returns the caller's role.
+- Concepts learned (RBAC model, 401 vs 403 in practice, bootstrap problem, `create_all` ≠ migrations) are logged in the Day 9 row of `docs/Learning-Sheet.md`.
 
-- [ ] Task 1 (in progress): add `role` column to User model (`USER` default) — mind the `create_all` wall
-- [ ] Task 2: `require_admin` dependency
-- [ ] Task 3: admin-only endpoint + verify 403 vs 200 with curl
+## 🚀 Next Steps for New Session (Day 10)
+Day 10 — JWT Deep Dive + Frontend Auth Integration: settle the token design (access vs refresh, logout), then wire the Day 4/5 stub pages to real auth.
+
+- [ ] Task 1: backend — refresh token issuance + rotation, logout/revocation
+- [ ] Task 2: frontend — login/register forms call real endpoints; JWT stored; shared fetch helper attaches `Authorization: Bearer`
+- [ ] Task 3: session restore via `GET /users/me` on load; logout clears token; verify full flow in the browser
 
 ## ⏳ Still To Do (user actions before next deploy)
-- [x] Add `JWT_SECRET` (generate: `openssl rand -hex 32`) to local `.env`. *(done 2026-10-20 via `gh`)*
-- [x] Create the `JWT_SECRET` secret in GitHub repo settings (needed by deploy.yml). *(done 2026-10-20 via `gh secret set`)*
+- [ ] **Before pushing Day 9:** run `ALTER TABLE users ADD COLUMN role VARCHAR(10) NOT NULL DEFAULT 'USER';` on the live Neon DB (Neon SQL Editor) — the Day 9 code references `role`, so prod would 500 on register/queries until the column exists.
 - [ ] Optionally `DELETE FROM users;` on the live Neon DB (old plaintext users are already locked out - bcrypt verify fails - but removing them is tidier).
 - [ ] With `JWT_SECRET` set, re-run the expired-token curl live to see the 401 "Token has expired" path end-to-end.

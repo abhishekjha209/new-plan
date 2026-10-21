@@ -9,7 +9,7 @@
 
 ---
 
-## 📖 Days 1–8
+## 📖 Days 1–9
 
 | Day | Commands | Topics | Algorithms | Libs / Tools | Concepts |
 |-----|----------|--------|------------|--------------|----------|
@@ -21,6 +21,7 @@
 | 6 — PostgreSQL + SQLAlchemy | `docker compose exec db psql` | ORM; connection pooling; foreign keys; cascade deletes | — | SQLAlchemy 2.0 (`Mapped`/`mapped_column`); psycopg; PostgreSQL | sessions & unit-of-work; `create_all` ≠ migrations; container DNS (service names as hostnames) |
 | 7 — Cloud deployment | `gcloud run deploy`; `gcloud run services describe`; `gh secret set` | serverless (Cloud Run); serverless Postgres (Neon); connection pooling (PgBouncer); IAM service accounts; CI/CD GitOps; region alignment & latency | — | Google Cloud Run; Neon; GitHub Actions; Vercel; Artifact Registry | Docker `CMD` shell vs exec form; **CORS wildcard `*` + credentials conflict**; secrets management; pooling prevents connection exhaustion when serverless scales |
 | 8 — Password auth | `openssl rand -hex 32` | password hashing; JWT anatomy (header.payload.signature); stateless auth; 401 vs 403; secret management | bcrypt (adaptive cost, built-in salt, ~100–250 ms/verify at cost 12, format `$2b$12$...`); base64url | general hashes (SHA) are **fast** → wrong for passwords; JWTs are **signed, not encrypted**; claims: `sub`/`iat`/`exp`; stateless ⇒ **no token revocation**; constant-time compare; vague login errors prevent user enumeration; DB is final authority, not the token; HS256 ⇒ ≥256-bit random secret (`openssl rand -hex 32`), weak secrets fail silently; rotating the secret = instant global logout |
+| 9 — Authorization (RBAC) | `ALTER TABLE users ADD COLUMN role VARCHAR(10) NOT NULL DEFAULT 'USER';`; `UPDATE users SET role='ADMIN' WHERE email=...` | RBAC; authorization vs authentication; dependency chaining; bootstrap problem | — | psql; DBeaver | **401 = unknown, 403 = known-but-not-allowed**; `create_all` never ALTERs existing tables (dev-only shortcut → Alembic on Day 16); never trust the client: role **never** from request body (privilege escalation); permissions attach to **roles, not users**; role read from **DB per request**, not JWT claims (claims go stale on demotion); first admin appointed **out-of-band**; "the privilege is the absence of the user_id filter" |
 
 ---
 
@@ -30,7 +31,7 @@
 
 | Day | Commands | Topics | Algorithms | Libs / Tools | Concepts |
 |-----|----------|--------|------------|--------------|----------|
-| 9 — Authorization (RBAC) | *(in progress)* | RBAC; authorization vs authentication; permissions modeling | — | DBeaver (`localhost:5432`, db `mydb`) for browsing dev data | 401 vs 403 distinction in practice; least privilege |
+| 10 — JWT Deep Dive + Frontend Auth Integration | *(in progress)* | refresh tokens & rotation; access vs refresh; logout/revocation; token theft; wiring the Day 4/5 UI stubs to real auth | — | — | stateless ⇒ no revocation (Day 8) is the problem refresh tokens solve |
 
 ---
 
