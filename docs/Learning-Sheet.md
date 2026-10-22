@@ -9,7 +9,7 @@
 
 ---
 
-## 📖 Days 1–9
+## 📖 Days 1–10
 
 | Day | Commands | Topics | Algorithms | Libs / Tools | Concepts |
 |-----|----------|--------|------------|--------------|----------|
@@ -22,6 +22,7 @@
 | 7 — Cloud deployment | `gcloud run deploy`; `gcloud run services describe`; `gh secret set` | serverless (Cloud Run); serverless Postgres (Neon); connection pooling (PgBouncer); IAM service accounts; CI/CD GitOps; region alignment & latency | — | Google Cloud Run; Neon; GitHub Actions; Vercel; Artifact Registry | Docker `CMD` shell vs exec form; **CORS wildcard `*` + credentials conflict**; secrets management; pooling prevents connection exhaustion when serverless scales |
 | 8 — Password auth | `openssl rand -hex 32` | password hashing; JWT anatomy (header.payload.signature); stateless auth; 401 vs 403; secret management | bcrypt (adaptive cost, built-in salt, ~100–250 ms/verify at cost 12, format `$2b$12$...`); base64url | general hashes (SHA) are **fast** → wrong for passwords; JWTs are **signed, not encrypted**; claims: `sub`/`iat`/`exp`; stateless ⇒ **no token revocation**; constant-time compare; vague login errors prevent user enumeration; DB is final authority, not the token; HS256 ⇒ ≥256-bit random secret (`openssl rand -hex 32`), weak secrets fail silently; rotating the secret = instant global logout |
 | 9 — Authorization (RBAC) | `ALTER TABLE users ADD COLUMN role VARCHAR(10) NOT NULL DEFAULT 'USER';`; `UPDATE users SET role='ADMIN' WHERE email=...` | RBAC; authorization vs authentication; dependency chaining; bootstrap problem | — | psql; DBeaver | **401 = unknown, 403 = known-but-not-allowed**; `create_all` never ALTERs existing tables (dev-only shortcut → Alembic on Day 16); never trust the client: role **never** from request body (privilege escalation); permissions attach to **roles, not users**; role read from **DB per request**, not JWT claims (claims go stale on demotion); first admin appointed **out-of-band**; "the privilege is the absence of the user_id filter" |
+| 10 — JWT Deep Dive + Frontend Auth Integration | `POST /auth/refresh`; `POST /auth/logout`; `docker compose up -d --force-recreate backend` (env_file is read only at container CREATION - env changes need recreate, not restart!); `npx tsc --noEmit` | access vs refresh tokens; rotation; server-side logout; token theft window; **auto-refresh fetch wrapper**; session restore; client-side auth state | — | `secrets.token_urlsafe(48)`; SHA-256 for high-entropy tokens (bcrypt is only for low-entropy human passwords); Next 16: `'use client'`, `useRouter` from `next/navigation` | access = stateless JWT, **15 min**; refresh = **opaque + stateful DB row**, 7 days, stored **SHA-256 hashed**; **logout = revoke the refresh row** (access lives out its ≤15 min - accepted); rotation ⇒ replayed old refresh → 401 (reuse = theft signal); `.env` overrides code defaults — 60 was hiding our 15; **single-flight refresh** (concurrent 401s share one refresh promise - rotation would kill the rest); client 401 ⇒ refresh ⇒ retry once, callers never see expiry; **localStorage readable by any JS ⇒ httpOnly cookies + CSRF is the production pattern**; App Router: **layout stays mounted across navigation ⇒ auth state needs an explicit event** ("auth-changed"); **`NEXT_PUBLIC_API_URL` decides which backend the browser hits** — a Day-7 `.env.local` leftover silently pointed local dev at PROD (blank `role` in the response exposed it) |
 
 ---
 
@@ -31,7 +32,7 @@
 
 | Day | Commands | Topics | Algorithms | Libs / Tools | Concepts |
 |-----|----------|--------|------------|--------------|----------|
-| 10 — JWT Deep Dive + Frontend Auth Integration | `POST /auth/refresh`; `POST /auth/logout`; `docker compose up -d --force-recreate backend` (env_file is read only at container CREATION - env changes need recreate, not restart!) | access vs refresh tokens; rotation; server-side logout; token theft window | — | `secrets.token_urlsafe(48)`; SHA-256 for high-entropy tokens (bcrypt is only for low-entropy human passwords) | access = stateless JWT, **15 min**; refresh = **opaque + stateful DB row**, 7 days, stored **SHA-256 hashed**; **logout = revoke the refresh row** (access lives out its ≤15 min - accepted); rotation ⇒ replayed old refresh → 401 (reuse = theft signal); `.env` overrides code defaults — 60 was hiding our 15 |
+| 11 — SQL Fundamentals | *(in progress)* | — | — | — | — |
 
 ---
 
@@ -40,7 +41,6 @@
 *Just topic names. Nothing here blocks current work.*
 
 - Argon2 (memory-hard password hashing — the modern upgrade path from bcrypt)
-- Refresh tokens & logout flows (Day 10)
 - Token revocation strategies (denylist, short TTLs)
 - Lazy password-hash migration (verify-on-login, then re-hash)
 - Why python-jose vs PyJWT matters (library maintenance & CVE history)

@@ -1,9 +1,9 @@
 # Progress Log
 
-**Current Status:** Day 10 in progress — backend half complete (refresh tokens + logout, verified)
-**Next Up:** Day 10 frontend half — wire login/register UI, token storage, auto-refresh fetch helper, logout button
+**Current Status:** Completed Day 10
+**Next Up:** Start Day 11 (SQL Fundamentals)
 
-## 🏆 What Has Been Accomplished (Days 1 - 9)
+## 🏆 What Has Been Accomplished (Days 1 - 10)
 
 ### 1. Architecture & Design (Day 1)
 - Defined the product: **AI Knowledge Platform**
@@ -101,14 +101,19 @@
 - **Verified matrix:** no token → 401; USER token → 403 "Admin access required"; ADMIN token → 200 with full user list; `/users/me` now returns the caller's role.
 - Concepts learned (RBAC model, 401 vs 403 in practice, bootstrap problem, `create_all` ≠ migrations) are logged in the Day 9 row of `docs/Learning-Sheet.md`.
 
-## 🚀 Next Steps for New Session (Day 10)
-Day 10 — JWT Deep Dive + Frontend Auth Integration: settle the token design (access vs refresh, logout), then wire the Day 4/5 stub pages to real auth.
+### 10. JWT Deep Dive + Frontend Auth Integration (Day 10)
+- **Two-token model (backend):** access tokens cut from 60 min to **15 min** — stateless and unrevocable, but the short window is what makes that acceptable. Refresh tokens are long-lived (7 days), **opaque** (`secrets.token_urlsafe(48)`, no claims), and **stateful**: rows in the new `refresh_tokens` table, stored **SHA-256-hashed** (fast hash is safe for high-entropy random tokens; bcrypt's slowness is for human passwords). The `revoked_at` column is logout/revocation.
+- **`POST /auth/refresh` with rotation:** the presented token is revoked and a fresh pair minted; a replayed old token → 401 (reuse = theft signal). `POST /auth/logout`: idempotent revoke of the refresh row; the access token lives out its ≤15 min by accepted design.
+- **Day 9 callback confirmed:** `create_all` auto-created `refresh_tokens` on deploy — new tables are its one job; altering `users` on prod still required the manual Neon `ALTER` (applied 2026-10-22, before the Day 9/10 push).
+- **`authFetch` browser wrapper** (`frontend/src/lib/auth.ts`): attaches Bearer, and on 401 runs a **single-flight** refresh (one shared in-flight promise — rotation would kill concurrent retries) and retries the original request once; callers never handle expiry. Tokens in localStorage (httpOnly cookies + CSRF noted as the production pattern, backlog).
+- **Frontend wired end-to-end:** login page (login/register toggle → token storage → redirect), `AuthNav` (session restore via `/users/me`, logout button), home session card (visible logged-in state), /documents (list + upload), /chat (document picker, message thread, conversation continuity via `conversation_id`). Day 4/5 stubs are gone; `npx tsc --noEmit` clean, all routes 200.
+- **App Router lesson (learned the hard way):** the layout stays mounted across navigations, so nav auth state did not update after login until login/logout broadcast an `auth-changed` custom event for `AuthNav` to re-check.
+- **Environment mix-up (also the hard way):** Day 7's `frontend/.env.local` still pointed `NEXT_PUBLIC_API_URL` at the **live Cloud Run API**, so all browser traffic hit prod — `developer@example.com` login failed there (local-only user), a stray `testUser` got registered into Neon, and the blank `role` in responses exposed that prod ran pre-Day-9 schema. Repointed to `localhost:8000`; stray prod account deleted.
+- Concepts learned (two-token rationale, rotation, single-flight refresh, App Router client-state persistence, NEXT_PUBLIC_API_URL semantics) are logged in the Day 10 row of `docs/Learning-Sheet.md`.
 
-- [x] Task 1: backend — refresh token issuance + rotation, logout/revocation *(done 2026-10-21; verified end-to-end: expired access → 401, rotated-token replay → 401, logout → refresh dead, access outlives logout ≤15 min by design; access TTL 15 min, refresh 7 days stored SHA-256 hashed)*
-- [ ] Task 2: frontend — login/register forms call real endpoints; JWT stored; shared fetch helper attaches `Authorization: Bearer`
-- [ ] Task 3: session restore via `GET /users/me` on load; logout clears token; verify full flow in the browser
+## 🚀 Next Steps for New Session (Day 11)
+Begin **Day 11: SQL Fundamentals** — get hands-on with the query language underneath SQLAlchemy: `SELECT` fluency, filtering, joins, aggregation, and reading query plans (foundation for Day 12 indexes).
 
 ## ⏳ Still To Do (user actions before next deploy)
-- [ ] **Before pushing Day 9:** run `ALTER TABLE users ADD COLUMN role VARCHAR(10) NOT NULL DEFAULT 'USER';` on the live Neon DB (Neon SQL Editor) — the Day 9 code references `role`, so prod would 500 on register/queries until the column exists.
-- [ ] Optionally `DELETE FROM users;` on the live Neon DB (old plaintext users are already locked out - bcrypt verify fails - but removing them is tidier).
+- [x] ~~Before pushing Day 9: ALTER on live Neon~~ *(done 2026-10-22 via psql; stray `testUser` from the .env.local mix-up also deleted — prod `users` table is empty)*
 - [ ] With `JWT_SECRET` set, re-run the expired-token curl live to see the 401 "Token has expired" path end-to-end.
